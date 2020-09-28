@@ -1,11 +1,11 @@
 #include <optional>
 #include <map>
-template <class CharSequence, class UserData>
+template <class CharSequence, class UserData, class Compare = std::less<typename CharSequence::value_type>>
 class Trie {
     using CharType = typename CharSequence::value_type;
     class Node {
         std::optional<UserData> m_userData;
-        std::map<CharType, Node> m_children;
+        std::map<CharType, Node, Compare> m_children;
         std::size_t m_fullWordsCount = 0;
 
     public:
