@@ -1,29 +1,35 @@
 #include <optional>
 #include <map>
+#include <list>
 template <class CharSequence, class UserData, class Compare = std::less<typename CharSequence::value_type>>
 class Trie {
     using CharType = typename CharSequence::value_type;
     class Node {
-        std::optional<UserData> m_userData;
+        std::list<UserData> m_userData;
         std::map<CharType, Node, Compare> m_children;
         std::size_t m_fullWordsCount = 0;
 
     public:
         template<class CharIter>
-        void insert(CharIter begin, CharIter end, const UserData &data) {
+        bool insert(CharIter begin, CharIter end, const UserData &data) {
+            bool ret = true;
             if(begin == end) {
-                m_userData = data;
-                m_fullWordsCount = 1;
+                if(!m_userData.empty())
+                   ret = false;
+                m_userData.push_back(data);
             } else {
-                m_fullWordsCount ++;
                 Node * node = nullptr;
                 if(auto f = m_children.find(*begin); f != m_children.end()) {
                     node = &f->second;
                 } else {
                     node = &m_children[*begin];
                 }
-                node->insert(std::next(begin), end, data);
+                if(!node->insert(std::next(begin), end, data))
+                    ret = false;
+
             }
+            if(ret) m_fullWordsCount ++;
+            return ret;
         }
         Node * getChild(CharType ch) {
             if(auto sr = m_children.find(ch); sr != m_children.end()) {
@@ -34,8 +40,8 @@ class Trie {
         std::size_t WordsCount() {
             return m_fullWordsCount;
         }
-        std::optional<UserData> GetWordByIndex(std::size_t i) {
-            if(m_userData) {
+        std::list<UserData> GetWordByIndex(std::size_t i) {
+            if(!m_userData.empty()) {
                 if(i == 0) return m_userData;
                 i --;
             }
@@ -53,8 +59,8 @@ class Trie {
     };
     Node m_root;
 public:
-    void insert(const CharSequence & word, const UserData & userData) {
-        m_root.insert(word.begin(), word.end(), userData);
+    bool insert(const CharSequence & word, const UserData & userData) {
+        return m_root.insert(word.begin(), word.end(), userData);
     }
 
     class FilteringResult {
@@ -67,8 +73,8 @@ public:
         FilteringResult(Node * root): m_root(root) {
 
         }
-        UserData operator[](std::size_t i) {
-            return *m_root->GetWordByIndex(i);
+        std::list<UserData> operator[](std::size_t i) {
+            return m_root->GetWordByIndex(i);
         }
     };
 
